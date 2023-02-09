@@ -1,4 +1,3 @@
-
 bl_info = {
     "name": "6DOF Mouse Add-on",
     "catergory": "3D View",
@@ -6,10 +5,13 @@ bl_info = {
     "version": (0, 1),
     "blender": (3, 3, 3),
 }
-import bpy
-from bpy.props import EnumProperty, IntProperty
 
-class SIX_DOF_PT_settings_panel(bpy.types.Panel):
+import bpy
+import random
+from bpy.props import EnumProperty, IntProperty, FloatProperty
+from bpy.types import Operator, Panel
+
+class SIX_DOF_PT_settings_panel(Panel):
     bl_label = "USB Settings"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
@@ -39,6 +41,14 @@ class SIX_DOF_PT_settings_panel(bpy.types.Panel):
         items=baudrate_callback,
     )
     
+    bpy.types.Object.delay_prop = FloatProperty(
+        name = "Delay",
+        description = "Delay of serial read",
+        default = 1.0,
+        min = 0.01,
+        max = 1.0,
+    )
+    
     def draw(self, context):
         layout = self.layout
         
@@ -47,70 +57,40 @@ class SIX_DOF_PT_settings_panel(bpy.types.Panel):
 
         row = layout.row()
         row.prop(context.scene, "baudrate_dropdown_list")
-        
-        
 
-class SIX_DOF_PT_axis_panel(bpy.types.Panel):
+        row = layout.row()
+        row.prop(context.object, 'delay_prop', slider=True)
+
+
+def update_redraw(self, context):
+    pass # Just an empty function to force update of IntProperties
+
+
+class SIX_DOF_PT_axis_panel(Panel):
     bl_label = "Axis"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = '6DOF'
 
-    bpy.types.Scene.JoyX1 = bpy.props.IntProperty(
-        name = "",
-        description = "Joystick 1 X-axis",
-        default = 512,
-        min = 0,
-        max = 1023
-    )
+    def create_axis(num, axis):
+        DEF = 512
+        MIN = 0
+        MAX = 1023
+        return IntProperty(
+            name = "",
+            description = "Joystick {} {}-axis".format(num, axis),
+            default = DEF,
+            min = MIN,
+            max = MAX,
+            update = update_redraw
+        )
 
-    bpy.types.Scene.JoyY1 = IntProperty(
-        name = "",
-        description = "Joystick 1 Y-axis",
-        default = 512,
-        min = 0,
-        max = 1023
-    )
-
-    bpy.types.Scene.JoyX2 = IntProperty(
-        name = "",
-        description = "Joystick 2 X-axis",
-        default = 512,
-        min = 0,
-        max = 1023
-    )
-
-    bpy.types.Scene.JoyY2 = IntProperty(
-        name = "",
-        description = "Joystick 2 Y-axis",
-        default = 512,
-        min = 0,
-        max = 1023
-    )
-
-    bpy.types.Scene.JoyX3 = IntProperty(
-        name = "",
-        description = "Joystick 3 X-axis",
-        default = 512,
-        min = 0,
-        max = 1023
-    )
-
-    bpy.types.Scene.JoyY3 = IntProperty(
-        name = "",
-        description = "Joystick 3 Y-axis",
-        default = 512,
-        min = 0,
-        max = 1023
-    )
-
-    # For some reason this stopped working
-    # bpy.context.scene.JoyX1 = 25
-    # bpy.context.scene.JoyY1 = 65
-    # bpy.context.scene.JoyX2 = 123
-    # bpy.context.scene.JoyY2 = 765
-    # bpy.context.scene.JoyX3 = 342
-    # bpy.context.scene.JoyY3 = 797
+    bpy.types.Scene.JoyX1 = create_axis(1, 'X')
+    bpy.types.Scene.JoyY1 = create_axis(1, 'Y')
+    bpy.types.Scene.JoyX2 = create_axis(2, 'X')
+    bpy.types.Scene.JoyY2 = create_axis(2, 'Y')
+    bpy.types.Scene.JoyX3 = create_axis(3, 'X')
+    bpy.types.Scene.JoyY3 = create_axis(3, 'Y')
 
     def draw(self, context):
         layout = self.layout
@@ -121,34 +101,46 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
         row.label(text= "Y")
         row.enabled = False
 
-        row = layout.row()
-        row.label(text= "Joystick 1")
-        row.prop(context.scene, "JoyX1")
-        row.prop(context.scene, "JoyY1")
-        row.enabled = False
+        for num in range(1, 4):
+            row = layout.row()
+            row.label(text= "Joystick {}".format(num))
+            row.prop(context.scene, "JoyX{}".format(num))
+            row.prop(context.scene, "JoyY{}".format(num))
+            row.enabled = False
 
-        row = layout.row()
-        row.label(text= "Joystick 2")
-        row.prop(context.scene, "JoyX2")
-        row.prop(context.scene, "JoyY2")
-        row.enabled = False
 
-        row = layout.row()
-        row.label(text= "Joystick 3")
-        row.prop(context.scene, "JoyX3")
-        row.prop(context.scene, "JoyY3")
-        row.enabled = False
+class OT_fetch_data_operator(Operator):
+    bl_label = "Fetch USB data"
+    bl_idname = "object.fetch_usb_data"
     
-classes = [SIX_DOF_PT_settings_panel, SIX_DOF_PT_axis_panel]
-        
+    def execute(self, context):
+        bpy.context.scene.JoyX1 = random.randint(0,1023)
+        bpy.context.scene.JoyY1 = random.randint(0,1023)
+        bpy.context.scene.JoyX2 = random.randint(0,1023)
+        bpy.context.scene.JoyY2 = random.randint(0,1023)
+        bpy.context.scene.JoyX3 = random.randint(0,1023)
+        bpy.context.scene.JoyY3 = random.randint(0,1023)
+        return {'FINISHED'}    
+
+
+def timer_call_fnc():
+    bpy.ops.object.fetch_usb_data()
+    return bpy.context.object.delay_prop
+
+
+classes = [SIX_DOF_PT_settings_panel, SIX_DOF_PT_axis_panel, OT_fetch_data_operator]
+
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
+    bpy.app.timers.register( timer_call_fnc )
+    
 
 def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
+    bpy.app.timers.unregister( timer_call_fnc )
 
 if __name__ == "__main__":
     register()
