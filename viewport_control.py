@@ -57,7 +57,7 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
     bl_category = '6DOF'
 
     bpy.types.Scene.JoyX1 = bpy.props.IntProperty(
-        name = "x",
+        name = "",
         description = "Joystick 1 X-axis",
         default = 512,
         min = 0,
@@ -65,7 +65,7 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
     )
 
     bpy.types.Scene.JoyY1 = IntProperty(
-        name = "y",
+        name = "",
         description = "Joystick 1 Y-axis",
         default = 512,
         min = 0,
@@ -73,7 +73,7 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
     )
 
     bpy.types.Scene.JoyX2 = IntProperty(
-        name = "x",
+        name = "",
         description = "Joystick 2 X-axis",
         default = 512,
         min = 0,
@@ -81,7 +81,7 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
     )
 
     bpy.types.Scene.JoyY2 = IntProperty(
-        name = "y",
+        name = "",
         description = "Joystick 2 Y-axis",
         default = 512,
         min = 0,
@@ -89,7 +89,7 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
     )
 
     bpy.types.Scene.JoyX3 = IntProperty(
-        name = "x",
+        name = "",
         description = "Joystick 3 X-axis",
         default = 512,
         min = 0,
@@ -97,19 +97,20 @@ class SIX_DOF_PT_axis_panel(bpy.types.Panel):
     )
 
     bpy.types.Scene.JoyY3 = IntProperty(
-        name = "y",
+        name = "",
         description = "Joystick 3 Y-axis",
         default = 512,
         min = 0,
         max = 1023
     )
 
-    bpy.context.scene.JoyX1 = 25
-    bpy.context.scene.JoyY1 = 65
-    bpy.context.scene.JoyX2 = 123
-    bpy.context.scene.JoyY2 = 765
-    bpy.context.scene.JoyX3 = 342
-    bpy.context.scene.JoyY3 = 797
+    # For some reason this stopped working
+    # bpy.context.scene.JoyX1 = 25
+    # bpy.context.scene.JoyY1 = 65
+    # bpy.context.scene.JoyX2 = 123
+    # bpy.context.scene.JoyY2 = 765
+    # bpy.context.scene.JoyX3 = 342
+    # bpy.context.scene.JoyY3 = 797
 
     def draw(self, context):
         layout = self.layout
