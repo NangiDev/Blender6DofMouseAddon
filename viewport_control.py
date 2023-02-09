@@ -8,20 +8,29 @@ bl_info = {
 
 import bpy
 import random
-from bpy.props import EnumProperty, IntProperty, FloatProperty
+from bpy.props import EnumProperty, IntProperty, FloatProperty, BoolProperty
 from bpy.types import Operator, Panel
 
-class SIX_DOF_PT_settings_panel(Panel):
-    bl_label = "USB Settings"
+class BASE_panel:
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = '6DOF'
 
+class SIX_DOF_PT_main_panel(BASE_panel, Panel):
+    bl_label = "6 DOF Mouse"
+    
+    def draw(self, context):
+        layout = self.layout
+
+class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
+    bl_parent_id = "SIX_DOF_PT_main_panel"
+    bl_label = "USB Settings"
+
     def port_callback(self, context):
         return (
-               ('1', 'COM1', ''),
-               ('2', 'COM2', ''),
-               ('3', 'COM3', ''),
+               ('COM1', 'COM1', ''),
+               ('COM2', 'COM2', ''),
+               ('COM3', 'COM3', ''),
             )
 
     bpy.types.Scene.port_dropdown_list = EnumProperty(
@@ -31,9 +40,8 @@ class SIX_DOF_PT_settings_panel(Panel):
         
     def baudrate_callback(self, context):
         return (
-               ('1', '115200', ''),
-               ('2', '94000', ''),
-               ('3', '12300', ''),
+               ('115200', '115200', ''),
+               ('9600', '9600', ''),
             )
 
     bpy.types.Scene.baudrate_dropdown_list = EnumProperty(
@@ -48,15 +56,35 @@ class SIX_DOF_PT_settings_panel(Panel):
         min = 0.01,
         max = 1.0,
     )
-    
+
+    def update_connect(self, context):
+        # print()
+        # if bpy.context.window_manager.is_running == True:
+        #     print("Connect to:")
+        # else:
+        #     print("Disconnect from:")
+        # print(context.scene.port_dropdown_list)
+        # print(context.scene.baudrate_dropdown_list)
+        # print()
+        pass # Just an empty function to force update of BoolProperties
+
+    bpy.types.WindowManager.is_running = BoolProperty(update = update_connect)
+
     def draw(self, context):
         layout = self.layout
         
         row = layout.row()
+        wm = context.window_manager
+        label = "Disconnect" if wm.is_running else "Connect"
+        layout.prop(wm, 'is_running', text=label, toggle=True)
+        
+        row = layout.row()
         row.prop(context.scene, "port_dropdown_list")
+        row.enabled = not bpy.context.window_manager.is_running
 
         row = layout.row()
         row.prop(context.scene, "baudrate_dropdown_list")
+        row.enabled = not bpy.context.window_manager.is_running
 
         row = layout.row()
         row.prop(context.object, 'delay_prop', slider=True)
@@ -66,11 +94,9 @@ def update_redraw(self, context):
     pass # Just an empty function to force update of IntProperties
 
 
-class SIX_DOF_PT_axis_panel(Panel):
+class SIX_DOF_PT_axis_panel(BASE_panel, Panel):
+    bl_parent_id = "SIX_DOF_PT_main_panel"
     bl_label = "Axis"
-    bl_space_type = 'VIEW_3D'
-    bl_region_type = 'UI'
-    bl_category = '6DOF'
 
     def create_axis(num, axis):
         DEF = 512
@@ -114,6 +140,9 @@ class OT_fetch_data_operator(Operator):
     bl_idname = "object.fetch_usb_data"
     
     def execute(self, context):
+        if bpy.context.window_manager.is_running == False:
+            return {'FINISHED'}    
+
         bpy.context.scene.JoyX1 = random.randint(0,1023)
         bpy.context.scene.JoyY1 = random.randint(0,1023)
         bpy.context.scene.JoyX2 = random.randint(0,1023)
@@ -128,13 +157,14 @@ def timer_call_fnc():
     return bpy.context.object.delay_prop
 
 
-classes = [SIX_DOF_PT_settings_panel, SIX_DOF_PT_axis_panel, OT_fetch_data_operator]
+classes = [SIX_DOF_PT_main_panel, SIX_DOF_PT_settings_panel, SIX_DOF_PT_axis_panel, OT_fetch_data_operator]
 
 
 def register():
     for cls in classes:
         bpy.utils.register_class(cls)
     bpy.app.timers.register( timer_call_fnc )
+    bpy.context.window_manager.is_running = False
     
 
 def unregister():
