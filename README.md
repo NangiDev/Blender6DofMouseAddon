@@ -14,3 +14,7 @@ It will take the serial data and transform it to translation and rotation inside
 * Copy the serial folder, it is under PySerial\pyserial-3.2.1\serial (the version can change)
 * Paste the folder in your blender modules folder, 2.83\scripts\modules,
 and now you should be able to use import serial
+
+## Screenshots
+### Addon GUI
+![Addon GUI](images/gui.png)
