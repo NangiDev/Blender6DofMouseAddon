@@ -8,8 +8,11 @@ bl_info = {
 
 import bpy
 import random
+import serial.tools.list_ports
 from bpy.props import EnumProperty, IntProperty, FloatProperty, BoolProperty
 from bpy.types import Operator, Panel
+
+DEBUG = False
 
 class BASE_panel:
     bl_space_type = 'VIEW_3D'
@@ -27,11 +30,8 @@ class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
     bl_label = "USB Settings"
 
     def port_callback(self, context):
-        return (
-               ('COM1', 'COM1', ''),
-               ('COM2', 'COM2', ''),
-               ('COM3', 'COM3', ''),
-            )
+        ports = [(str(item), str(item), '') for item in list(serial.tools.list_ports.comports())]
+        return ports if ports else (('-1', 'No device found', ''),)
 
     bpy.types.Scene.port_dropdown_list = EnumProperty(
         name="Port",
@@ -39,10 +39,9 @@ class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
         )
         
     def baudrate_callback(self, context):
-        return (
-               ('115200', '115200', ''),
-               ('9600', '9600', ''),
-            )
+        baudrates = [(str(item), str(item), '') for item in serial.Serial.BAUDRATES]
+        baudrates.reverse()
+        return baudrates if baudrates else (('-1', 'No valid baudrates', ''),)
 
     bpy.types.Scene.baudrate_dropdown_list = EnumProperty(
         name="Baudrate",
@@ -58,14 +57,6 @@ class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
     )
 
     def update_connect(self, context):
-        # print()
-        # if bpy.context.window_manager.is_running == True:
-        #     print("Connect to:")
-        # else:
-        #     print("Disconnect from:")
-        # print(context.scene.port_dropdown_list)
-        # print(context.scene.baudrate_dropdown_list)
-        # print()
         pass # Just an empty function to force update of BoolProperties
 
     bpy.types.WindowManager.is_running = BoolProperty(update = update_connect)
@@ -76,18 +67,20 @@ class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
         row = layout.row()
         wm = context.window_manager
         label = "Disconnect" if wm.is_running else "Connect"
-        layout.prop(wm, 'is_running', text=label, toggle=True)
+        row.prop(wm, 'is_running', text=label, toggle=True)
+        row.enabled = context.scene.port_dropdown_list != '-1' or DEBUG
         
         row = layout.row()
         row.prop(context.scene, "port_dropdown_list")
-        row.enabled = not bpy.context.window_manager.is_running
+        row.enabled = not bpy.context.window_manager.is_running and context.scene.port_dropdown_list != '-1' or DEBUG
 
         row = layout.row()
         row.prop(context.scene, "baudrate_dropdown_list")
-        row.enabled = not bpy.context.window_manager.is_running
+        row.enabled = not bpy.context.window_manager.is_running and context.scene.baudrate_dropdown_list != '-1' and context.scene.port_dropdown_list != '-1' or DEBUG
 
         row = layout.row()
         row.prop(context.object, 'delay_prop', slider=True)
+        row.enabled = context.scene.port_dropdown_list != '-1' or DEBUG
 
 
 def update_redraw(self, context):
@@ -152,12 +145,12 @@ class OT_fetch_data_operator(Operator):
         return {'FINISHED'}    
 
 
+classes = [SIX_DOF_PT_main_panel, SIX_DOF_PT_settings_panel, SIX_DOF_PT_axis_panel, OT_fetch_data_operator]
+
+
 def timer_call_fnc():
     bpy.ops.object.fetch_usb_data()
     return bpy.context.object.delay_prop
-
-
-classes = [SIX_DOF_PT_main_panel, SIX_DOF_PT_settings_panel, SIX_DOF_PT_axis_panel, OT_fetch_data_operator]
 
 
 def register():
@@ -171,6 +164,7 @@ def unregister():
     for cls in classes:
         bpy.utils.unregister_class(cls)
     bpy.app.timers.unregister( timer_call_fnc )
+
 
 if __name__ == "__main__":
     register()
