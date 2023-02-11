@@ -13,6 +13,7 @@ bl_info = {
 
 
 DEBUG = False
+ser = serial.Serial()
 
 
 class BASE_panel:
@@ -33,7 +34,7 @@ class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
     bl_label = "USB Settings"
 
     def port_callback(self, context):
-        ports = [(str(item), str(item), '')
+        ports = [(str(item).split(" ")[0], str(item), '')
                  for item in list(serial.tools.list_ports.comports())]
         return ports if ports else (('-1', 'No device found', ''),)
 
@@ -57,7 +58,7 @@ class SIX_DOF_PT_settings_panel(BASE_panel, Panel):
         name="Delay",
         description="Delay of serial read",
         default=1.0,
-        min=0.01,
+        min=0.000001,
         max=1.0,
     )
 
@@ -141,15 +142,36 @@ class OT_fetch_data_operator(Operator):
     bl_idname = "object.fetch_usb_data"
 
     def execute(self, context):
-        if bpy.context.window_manager.is_running == False:
-            return {'FINISHED'}
+        if bpy.context.window_manager.is_running:
+            if not ser.is_open:
+                ser.port = context.scene.port_dropdown_list
+                ser.baudrate = context.scene.baudrate_dropdown_list
+                ser.timeout = 0.01
+                ser.open()
+                # ser = serial.Serial(port, baudrate)
 
-        bpy.context.scene.JoyX1 = random.randint(0, 1023)
-        bpy.context.scene.JoyY1 = random.randint(0, 1023)
-        bpy.context.scene.JoyX2 = random.randint(0, 1023)
-        bpy.context.scene.JoyY2 = random.randint(0, 1023)
-        bpy.context.scene.JoyX3 = random.randint(0, 1023)
-        bpy.context.scene.JoyY3 = random.randint(0, 1023)
+            if ser.is_open:
+                line = ser.readline().decode('utf-8').strip()
+                # print(line)
+                parsed = line.split(";")
+                # print(parsed)
+                bpy.context.scene.JoyX1 = int(parsed[0])
+                bpy.context.scene.JoyY1 = int(parsed[1])
+                bpy.context.scene.JoyX2 = int(parsed[2])
+                bpy.context.scene.JoyY2 = int(parsed[3])
+                bpy.context.scene.JoyX3 = int(parsed[4])
+                bpy.context.scene.JoyY3 = int(parsed[5])
+                # print(line)
+
+            # bpy.context.scene.JoyX1 = random.randint(0, 1023)
+            # bpy.context.scene.JoyY1 = random.randint(0, 1023)
+            # bpy.context.scene.JoyX2 = random.randint(0, 1023)
+            # bpy.context.scene.JoyY2 = random.randint(0, 1023)
+            # bpy.context.scene.JoyX3 = random.randint(0, 1023)
+            # bpy.context.scene.JoyY3 = random.randint(0, 1023)
+        else:
+            if ser.is_open:
+                ser.close()
         return {'FINISHED'}
 
 
