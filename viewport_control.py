@@ -13,7 +13,8 @@ bl_info = {
 
 
 DEBUG = False
-ser = serial.Serial()
+ser = serial.Serial(bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+                    stopbits=serial.STOPBITS_ONE, timeout=0.01)
 
 
 class BASE_panel:
@@ -146,29 +147,21 @@ class OT_fetch_data_operator(Operator):
             if not ser.is_open:
                 ser.port = context.scene.port_dropdown_list
                 ser.baudrate = context.scene.baudrate_dropdown_list
-                ser.timeout = 0.01
                 ser.open()
-                # ser = serial.Serial(port, baudrate)
 
             if ser.is_open:
-                line = ser.readline().decode('utf-8').strip()
-                # print(line)
-                parsed = line.split(";")
-                # print(parsed)
-                bpy.context.scene.JoyX1 = int(parsed[0])
-                bpy.context.scene.JoyY1 = int(parsed[1])
-                bpy.context.scene.JoyX2 = int(parsed[2])
-                bpy.context.scene.JoyY2 = int(parsed[3])
-                bpy.context.scene.JoyX3 = int(parsed[4])
-                bpy.context.scene.JoyY3 = int(parsed[5])
-                # print(line)
+                ints = []
+                for i in range(6):
+                    high_byte = ord(ser.read(1))
+                    low_byte = ord(ser.read(1))
+                    ints.append(high_byte << 8 | low_byte)
 
-            # bpy.context.scene.JoyX1 = random.randint(0, 1023)
-            # bpy.context.scene.JoyY1 = random.randint(0, 1023)
-            # bpy.context.scene.JoyX2 = random.randint(0, 1023)
-            # bpy.context.scene.JoyY2 = random.randint(0, 1023)
-            # bpy.context.scene.JoyX3 = random.randint(0, 1023)
-            # bpy.context.scene.JoyY3 = random.randint(0, 1023)
+                bpy.context.scene.JoyX1 = ints[0]
+                bpy.context.scene.JoyY1 = ints[1]
+                bpy.context.scene.JoyX2 = ints[2]
+                bpy.context.scene.JoyY2 = ints[3]
+                bpy.context.scene.JoyX3 = ints[4]
+                bpy.context.scene.JoyY3 = ints[5]
         else:
             if ser.is_open:
                 ser.close()
