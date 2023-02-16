@@ -1,7 +1,7 @@
 from time import sleep
 import serial
 
-ser = serial.Serial(port='/dev/ttyACM0', baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+ser = serial.Serial(port='COM10', baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                     stopbits=serial.STOPBITS_ONE, timeout=0.01)
 ser.close()
 ser.open()

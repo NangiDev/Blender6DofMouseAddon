@@ -1,14 +1,15 @@
 from time import sleep
 import serial
 
-ser = serial.Serial(port='/dev/ttyACM0', baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+# Depends on com0com, https://sourceforge.net/projects/com0com/
+
+ser = serial.Serial(port='COM11', baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                     stopbits=serial.STOPBITS_ONE, timeout=0.01)
 ser.close()
 ser.open()
 ser.flush()
 
 while (True):
-    data = ser.read(2)
-    ser.read(2)
-    result = int.from_bytes(data, byteorder='little')
-    print(result)
+    for i in range(6):
+        data = 512
+        ser.write(data.to_bytes(4, byteorder='little'))
