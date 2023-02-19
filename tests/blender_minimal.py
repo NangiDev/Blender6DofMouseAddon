@@ -21,10 +21,10 @@ ser.close()
 
 def your_function_to_run_in_background():
     while True:
-        print("lol1")
+        print("Print really fast")
 
 
-# the_thread = threading.Thread(
+the_thread = threading.Thread(
     daemon=True, target=your_function_to_run_in_background, args=())
 
 

@@ -11,5 +11,5 @@ ser.flush()
 
 while (True):
     for i in range(6):
-        data = 512
+        data = 100 + (i*100)
         ser.write(data.to_bytes(4, byteorder='little'))
