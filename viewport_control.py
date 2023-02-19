@@ -3,6 +3,7 @@ from bpy.props import EnumProperty, IntProperty, FloatProperty, BoolProperty, Po
 import bpy
 import mathutils
 import math
+import random
 import time
 
 import serial.tools.list_ports
@@ -28,12 +29,13 @@ class MyThread(threading.Thread):
 
     def run(self):
         while self._is_running and self._is_reading:
-            self._queue.put(2)
-            print("Back Thread: {}".format(self._queue.qsize()))
+            self._queue.put(random.randint(0, 1023))
+            # print("Back Thread: {}".format(self._queue.qsize()))
             self._is_reading = self._queue.qsize() < 6
 
 
 class MyAddonProperties(PropertyGroup):
+
     def update_is_running(self, context):
         self.read_tread._is_running = self.is_running
         self.read_tread._is_reading = self.is_running
@@ -44,6 +46,28 @@ class MyAddonProperties(PropertyGroup):
         ports = [(str(item).split(" ")[0], str(item), '')
                  for item in list(serial.tools.list_ports.comports())]
         return ports if ports else (('-1', 'No device found', ''),)
+
+    def create_axis(num, axis):
+        def update_redraw(self, context):
+            pass
+        DEF = 512
+        MIN = 0
+        MAX = 1023
+        return IntProperty(
+            name="",
+            description="Joystick {} {}-axis".format(num, axis),
+            default=DEF,
+            min=MIN,
+            max=MAX,
+            update=update_redraw
+        )
+
+    joyX1: create_axis(1, 'X')
+    joyY1: create_axis(1, 'Y')
+    joyX2: create_axis(2, 'X')
+    joyY2: create_axis(2, 'Y')
+    joyX3: create_axis(3, 'X')
+    joyY3: create_axis(3, 'Y')
 
     is_running: BoolProperty(default=False, update=update_is_running)
 
@@ -78,6 +102,21 @@ class SIX_DOF_PT_main_panel(Panel):
         row.prop(properties, "port_dropdown_list")
         row.enabled = not properties.is_running and properties.port_dropdown_list != '-1'
 
+        row = layout.row()
+        row.label(text="Axis")
+        row = layout.row()
+        row.label(text="")
+        row.label(text="X")
+        row.label(text="Y")
+        row.enabled = False
+
+        for num in range(1, 4):
+            row = layout.row()
+            row.label(text="Joystick {}".format(num))
+            row.prop(properties, "joyX{}".format(num))
+            row.prop(properties, "joyY{}".format(num))
+            row.enabled = False
+
 
 class OT_fetch_data_operator(Operator):
     bl_label = "Fetch USB data"
@@ -86,7 +125,14 @@ class OT_fetch_data_operator(Operator):
     def execute(self, context):
         properties = context.scene.my_addon
         while (not properties.read_tread._is_reading) and properties.is_running:
-            print("Main Thread: {}".format(properties.queue.get()))
+            properties.joyX1 = properties.queue.get()
+            properties.joyY1 = properties.queue.get()
+            properties.joyX2 = properties.queue.get()
+            properties.joyY2 = properties.queue.get()
+            properties.joyX3 = properties.queue.get()
+            properties.joyY3 = properties.queue.get()
+
+            # print("Main Thread: {}".format(properties.queue.qsize()))
             properties.read_tread._is_reading = properties.queue.qsize() <= 0
         if properties.read_tread._is_reading:
             properties.read_tread.run()
