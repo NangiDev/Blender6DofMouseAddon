@@ -5,8 +5,8 @@ I am building this addon to be able to read serial data from [my homemade 6DOF M
 It will take the serial data and transform it to translation and rotation inside Blender viewport.
 
 ## Dependencies
-* Blender
-* Pyserial
+* Blender 2.8 or greater
+* Pyserial 3.2 or greater
 
 ### Install Pyserial for Blender
 * Download the [pyserial source code](https://pypi.org/project/pyserial/#files). The file you're looking for ends with .tar.gz
@@ -14,6 +14,10 @@ It will take the serial data and transform it to translation and rotation inside
 * Copy the serial folder, it is under PySerial\pyserial-3.2.1\serial (the version can change)
 * Paste the folder in your blender modules folder, 2.83\scripts\modules,
 and now you should be able to use import serial
+
+## Actuall Blender Add-on
+### [viewport_control_no_thread.py](viewport_control_no_thread.py)
+This is the actuall add-on to install
 
 ## Tests
 ### [Blender Minimal](tests/blender_minimal.py)
