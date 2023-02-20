@@ -15,7 +15,6 @@ It will take the serial data and transform it to translation and rotation inside
 * Paste the folder in your blender modules folder, 2.83\scripts\modules,
 and now you should be able to use import serial
 
-
 ## Tests
 ### [Blender Minimal](tests/blender_minimal.py)
 This is just a simpel small Blender add-on to prove that we can read fast enough
@@ -25,3 +24,7 @@ This is a simple python program that reads from serial. Useful for testing and y
 
 ### [Write Simulator](tests/write_similator.py)
 This is a simple python program that writes to serial. Useful for testing and you don't have you Arduino hardware
+
+## Screenshots
+### Addon GUI
+![Addon GUI](images/gui.png)
