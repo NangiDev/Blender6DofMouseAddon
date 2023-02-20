@@ -105,9 +105,6 @@ class SIX_DOF_PT_main_panel(Panel):
 
         row = layout.row()
         row.label(text="Axis")
-
-        row = layout.row()
-        row.label(text="")
         row.label(text="X")
         row.label(text="Y")
         row.enabled = False
