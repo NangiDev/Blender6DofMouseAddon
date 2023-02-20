@@ -54,7 +54,7 @@ class MyAddonProperties(PropertyGroup):
     is_running: BoolProperty(default=False, update=update_is_running)
 
     joy_speed: FloatProperty(
-        name="Speed",
+        name="",
         description="Speed",
         precision=2,
         default=100.0,
@@ -62,7 +62,7 @@ class MyAddonProperties(PropertyGroup):
         max=200.0)
 
     joy_threshold: FloatProperty(
-        name="Threshold",
+        name="",
         description="Threshold",
         step=0.1,
         precision=2,
@@ -98,11 +98,20 @@ class SIX_DOF_PT_main_panel(Panel):
         row.enabled = not properties.is_running and properties.port_dropdown_list != '-1'
 
         row = layout.row()
+        row.separator()
+        row = layout.row()
+        row.label(text="Joystick Settings")
+
+        row = layout.row()
+        row.label(text="Speed")
         row.prop(properties, 'joy_speed', slider=True)
 
         row = layout.row()
+        row.label(text="Threshold")
         row.prop(properties, 'joy_threshold', slider=True)
 
+        row = layout.row()
+        row.separator()
         row = layout.row()
         row.label(text="Axis")
         row.label(text="X")
