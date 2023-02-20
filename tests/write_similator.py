@@ -1,5 +1,6 @@
 from time import sleep
 import serial
+import random
 
 # Depends on com0com, https://sourceforge.net/projects/com0com/
 
@@ -11,5 +12,6 @@ ser.flush()
 
 while (True):
     for i in range(6):
-        data = 100 + (i*100)
+        data = random.randint(0, 1023)
+        data = 110 + 100*i
         ser.write(data.to_bytes(4, byteorder='little'))
