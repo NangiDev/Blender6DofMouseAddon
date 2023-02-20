@@ -29,10 +29,10 @@ class MyAddonProperties(PropertyGroup):
     def create_axis(num, axis):
         def update_redraw(self, context):
             pass
-        DEF = 512
+        DEF = 0.5
         MIN = 0
-        MAX = 1023
-        return IntProperty(
+        MAX = 1
+        return FloatProperty(
             name="",
             description="Joystick {} {}-axis".format(num, axis),
             default=DEF,
@@ -50,8 +50,6 @@ class MyAddonProperties(PropertyGroup):
 
     ser: serial.Serial = serial.Serial(baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                                        stopbits=serial.STOPBITS_ONE, timeout=0.01)
-
-    # ser: PointerProperty(type=serial.Serial)
 
     is_running: BoolProperty(default=False, update=update_is_running)
 
@@ -104,23 +102,27 @@ class OT_fetch_data_operator(Operator):
 
     def read_one_int(self, ser):
         data = ser.read(2)
-        ser.read(2)
-        return int.from_bytes(data, byteorder='little')
+        return int.from_bytes(data, byteorder='little') / 1023
 
     def execute(self, context):
         properties = context.scene.my_addon
         if properties.is_running:
-            if not properties.ser.is_open:
-                properties.ser.port = properties.port_dropdown_list
-                properties.ser.open()
+            try:
+                if not properties.ser.is_open:
+                    properties.ser.port = properties.port_dropdown_list
+                    properties.ser.open()
 
-            if properties.ser.in_waiting > 0:
-                properties.joyX1 = self.read_one_int(properties.ser)
-                properties.joyY1 = self.read_one_int(properties.ser)
-                properties.joyX2 = self.read_one_int(properties.ser)
-                properties.joyY2 = self.read_one_int(properties.ser)
-                properties.joyX3 = self.read_one_int(properties.ser)
-                properties.joyY3 = self.read_one_int(properties.ser)
+                properties.ser.write(1)
+                if properties.ser.in_waiting >= 12:
+                    properties.joyX1 = self.read_one_int(properties.ser)
+                    properties.joyY1 = self.read_one_int(properties.ser)
+                    properties.joyX2 = self.read_one_int(properties.ser)
+                    properties.joyY2 = self.read_one_int(properties.ser)
+                    properties.joyX3 = self.read_one_int(properties.ser)
+                    properties.joyY3 = self.read_one_int(properties.ser)
+                    properties.ser.flush()
+            except:
+                properties.is_running = False
         else:
             if properties.ser.is_open:
                 properties.ser.close()
