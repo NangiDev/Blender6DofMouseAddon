@@ -53,6 +53,23 @@ class MyAddonProperties(PropertyGroup):
 
     is_running: BoolProperty(default=False, update=update_is_running)
 
+    joy_speed: FloatProperty(
+        name="Speed",
+        description="Speed",
+        precision=2,
+        default=100.0,
+        min=1.0,
+        max=200.0)
+
+    joy_threshold: FloatProperty(
+        name="Threshold",
+        description="Threshold",
+        step=0.1,
+        precision=2,
+        default=0.0,
+        min=0.0,
+        max=1.0)
+
     port_dropdown_list: EnumProperty(
         name="Port",
         items=port_callback_list,
@@ -81,7 +98,14 @@ class SIX_DOF_PT_main_panel(Panel):
         row.enabled = not properties.is_running and properties.port_dropdown_list != '-1'
 
         row = layout.row()
+        row.prop(properties, 'joy_speed', slider=True)
+
+        row = layout.row()
+        row.prop(properties, 'joy_threshold', slider=True)
+
+        row = layout.row()
         row.label(text="Axis")
+
         row = layout.row()
         row.label(text="")
         row.label(text="X")
