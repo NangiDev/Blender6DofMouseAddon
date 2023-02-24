@@ -215,6 +215,12 @@ class OT_fetch_data_operator(Operator):
                 print(e)
                 properties.is_running = False
         else:
+            properties.joyY1 = 0
+            properties.joyX1 = 0
+            properties.joyY2 = 0
+            properties.joyX2 = 0
+            properties.joyY3 = 0
+            properties.joyX3 = 0
             if properties.ser.is_open:
                 properties.ser.close()
         self.move(context)
