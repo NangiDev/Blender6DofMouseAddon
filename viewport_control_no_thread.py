@@ -29,9 +29,9 @@ class MyAddonProperties(PropertyGroup):
     def create_axis(num, axis):
         def update_redraw(self, context):
             pass
-        DEF = 0.5
-        MIN = 0
-        MAX = 1
+        DEF = 0.0
+        MIN = -1.0
+        MAX = 1.0
         return FloatProperty(
             name="",
             description="Joystick {} {}-axis".format(num, axis),
@@ -41,11 +41,11 @@ class MyAddonProperties(PropertyGroup):
             update=update_redraw
         )
 
-    joyX1: create_axis(1, 'X')
+    joyX1: create_axis(1, 'X')  # Right
     joyY1: create_axis(1, 'Y')
-    joyX2: create_axis(2, 'X')
+    joyX2: create_axis(2, 'X')  # Mid
     joyY2: create_axis(2, 'Y')
-    joyX3: create_axis(3, 'X')
+    joyX3: create_axis(3, 'X')  # Left
     joyY3: create_axis(3, 'Y')
 
     ser: serial.Serial = serial.Serial(baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
@@ -130,9 +130,62 @@ class OT_fetch_data_operator(Operator):
     bl_label = "Fetch USB data"
     bl_idname = "object.fetch_usb_data"
 
-    def read_one_int(self, ser):
+    origo = mathutils.Vector((0, 0, 0))
+    up = mathutils.Vector((0, 0, 1))  # Shared up vector
+
+    # Origo acts as normal to the plane the joysticks move on
+    planeOrigo1 = origo + mathutils.Vector((math.sin(0), -math.cos(0), 0))
+    planeOrigo2 = origo + \
+        mathutils.Vector(
+            (math.sin(2*math.pi / 3), -math.cos(2*math.pi / 3), 0))
+    planeOrigo3 = origo + \
+        mathutils.Vector((math.sin(2*2*math.pi / 3), -
+                          math.cos(2*2*math.pi / 3), 0))
+    # Side Axis is the third joystick axis. Up, PlaneOrigo and PlaneSide makes up 3 axis
+    planeSideAxis1 = up.cross(planeOrigo1)
+    planeSideAxis2 = up.cross(planeOrigo2)
+    planeSideAxis3 = up.cross(planeOrigo3)
+
+    def move(self, context):
+        properties = context.scene.my_addon
+        joystick1 = mathutils.Vector((properties.joyX1, properties.joyY1, 0))
+        joystick2 = mathutils.Vector((properties.joyX2, properties.joyY2, 0))
+        joystick3 = mathutils.Vector((properties.joyX3, properties.joyY3, 0))
+
+        point1 = self.planeOrigo1 + self.planeSideAxis1 * \
+            joystick1.x + self.up * joystick1.y
+        point2 = self.planeOrigo2 + self.planeSideAxis2 * \
+            joystick2.x + self.up * joystick2.y
+        point3 = self.planeOrigo3 + self.planeSideAxis3 * \
+            joystick3.x + self.up * joystick3.y
+
+        v1 = point2 - point1
+        v2 = point3 - point1
+        normal = v1.cross(v2)
+        normal.normalize()
+
+        # Om denna funkar så multiplicera denna matris på kamerans rotationsmatris
+        rotation = normal.rotation_difference(self.up).to_matrix()
+        centroid = (point1 + point2 + point3) / 3
+
+        camera = bpy.context.scene.camera
+        camera_rotation_matrix = camera.matrix_world.to_3x3()
+        translation = centroid @ camera_rotation_matrix
+        camera.location += translation
+
+        # Print the results
+        # print("Position:", centroid)
+        # print("Normal:", normal)
+        # print("Rot:", rotation)
+        # print("Up:", self.up)
+
+    def read_one_int(self, context, ser):
+        threshold = context.scene.my_addon.joy_threshold
         data = ser.read(2)
-        return int.from_bytes(data, byteorder='little') / 1023
+        value = int.from_bytes(data, byteorder='little') / 512 - 1
+        if (abs(value) - threshold < 0.0):
+            return 0.0
+        return value
 
     def execute(self, context):
         properties = context.scene.my_addon
@@ -144,18 +197,27 @@ class OT_fetch_data_operator(Operator):
 
                 properties.ser.write(1)
                 if properties.ser.in_waiting >= 12:
-                    properties.joyX1 = self.read_one_int(properties.ser)
-                    properties.joyY1 = self.read_one_int(properties.ser)
-                    properties.joyX2 = self.read_one_int(properties.ser)
-                    properties.joyY2 = self.read_one_int(properties.ser)
-                    properties.joyX3 = self.read_one_int(properties.ser)
-                    properties.joyY3 = self.read_one_int(properties.ser)
+                    properties.joyY1 = self.read_one_int(
+                        context, properties.ser)
+                    properties.joyX1 = self.read_one_int(
+                        context, properties.ser)
+                    properties.joyY2 = self.read_one_int(
+                        context, properties.ser)
+                    properties.joyX2 = self.read_one_int(
+                        context, properties.ser)
+                    properties.joyY3 = self.read_one_int(
+                        context, properties.ser)
+                    properties.joyX3 = self.read_one_int(
+                        context, properties.ser)
                     properties.ser.flush()
-            except:
+
+            except Exception as e:
+                print(e)
                 properties.is_running = False
         else:
             if properties.ser.is_open:
                 properties.ser.close()
+        self.move(context)
         return {'FINISHED'}
 
 
