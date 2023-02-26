@@ -3,6 +3,7 @@ from bpy.props import EnumProperty, IntProperty, FloatProperty, BoolProperty, Po
 import bpy
 import mathutils
 from mathutils import Matrix
+from mathutils import Vector
 import math
 import random
 
@@ -57,10 +58,10 @@ class MyAddonProperties(PropertyGroup):
     joy_speed: FloatProperty(
         name="",
         description="Speed",
-        precision=2,
-        default=100.0,
-        min=1.0,
-        max=200.0)
+        precision=4,
+        default=1.0,
+        min=0.0,
+        max=2.0)
 
     joy_threshold: FloatProperty(
         name="",
@@ -131,17 +132,17 @@ class OT_fetch_data_operator(Operator):
     bl_label = "Fetch USB data"
     bl_idname = "object.fetch_usb_data"
 
-    origo = mathutils.Vector((0, 0, 0))
-    up = mathutils.Vector((0, 1, 0))  # Shared up-vector
+    # Common up vector
+    up = mathutils.Vector((0, 0, 1))
 
-    # Origo acts as normal to the plane the joysticks move on
+    # Origo acts as normal in joystick space
     # planeOrigo1 = origo + mathutils.Vector((math.sin(0), -math.cos(0), 0))
-    planeOrigo1 = origo + mathutils.Vector((math.sin(2*math.pi / 3),
-                                            -math.cos(2*math.pi / 3), 0))
-    planeOrigo2 = origo + mathutils.Vector((math.sin(2*math.pi),
-                                            -math.cos(2*math.pi), 0))
-    planeOrigo3 = origo + mathutils.Vector((math.sin(2*2*math.pi / 3),
-                                            -math.cos(2*2*math.pi / 3), 0))
+    planeOrigo1 = mathutils.Vector((math.sin(2*math.pi / 3),
+                                    -math.cos(2*math.pi / 3), 0))
+    planeOrigo2 = mathutils.Vector((math.sin(2*math.pi),
+                                    -math.cos(2*math.pi), 0))
+    planeOrigo3 = mathutils.Vector((math.sin(2*2*math.pi / 3),
+                                    -math.cos(2*2*math.pi / 3), 0))
 
     # Side Axis is the third joystick axis. Up, PlaneOrigo and PlaneSide makes up 3 axis
     planeSideAxis1 = up.cross(planeOrigo1)
@@ -150,23 +151,28 @@ class OT_fetch_data_operator(Operator):
 
     def move(self, context):
         properties = context.scene.my_addon
-        # Joystick Y is axis Z in Blender
-        joystick1 = mathutils.Vector((properties.joyX1, 0, -properties.joyY1))
-        joystick2 = mathutils.Vector((properties.joyX2, 0, -properties.joyY2))
-        joystick3 = mathutils.Vector((properties.joyX3, 0, -properties.joyY3))
+        joystick1 = mathutils.Vector((properties.joyX1, properties.joyY1, 0))
+        joystick2 = mathutils.Vector((properties.joyX2, properties.joyY2, 0))
+        joystick3 = mathutils.Vector((properties.joyX3, properties.joyY3, 0))
 
+        # Joystick Y is axis Z in Blender
         point1 = self.planeOrigo1 + self.planeSideAxis1 * \
-            joystick1.x + self.up * joystick1.z
+            joystick1.x + self.up * joystick1.y
         point2 = self.planeOrigo2 + self.planeSideAxis2 * \
-            joystick2.x + self.up * joystick2.z
+            joystick2.x + self.up * joystick2.y
         point3 = self.planeOrigo3 + self.planeSideAxis3 * \
-            joystick3.x + self.up * joystick3.z
+            joystick3.x + self.up * joystick3.y
         centroid = (point1 + point2 + point3) / 3
 
+        # print(centroid)
+
         camera = bpy.context.scene.camera
-        camera_rotation_matrix = camera.matrix_world.to_3x3()
-        translation = camera_rotation_matrix @ centroid
-        camera.location += translation
+        blender_translation = Vector((centroid.x, centroid.z, -centroid.y))
+        world_translation = camera.matrix_world.to_3x3() @ blender_translation
+        camera.location += world_translation * properties.joy_speed
+        # camera_rotation_matrix = camera.matrix_world.to_3x3()
+        # translation = camera_rotation_matrix @ centroid
+        # camera.location += translation
 
         # v1 = point2 - point1
         # v2 = point3 - point1
@@ -198,6 +204,7 @@ class OT_fetch_data_operator(Operator):
                     properties.ser.port = properties.port_dropdown_list
                     properties.ser.open()
 
+                # The mouse is sending coordinates in the wrong order
                 properties.ser.write(1)
                 if properties.ser.in_waiting >= 12:
                     properties.joyY1 = self.read_one_int(
