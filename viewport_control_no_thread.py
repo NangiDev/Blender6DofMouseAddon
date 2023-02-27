@@ -136,13 +136,15 @@ class OT_fetch_data_operator(Operator):
     up = mathutils.Vector((0, 0, 1))
 
     # Origo acts as normal in joystick space
-    # planeOrigo1 = origo + mathutils.Vector((math.sin(0), -math.cos(0), 0))
-    planeOrigo1 = mathutils.Vector((math.sin(2*math.pi / 3),
-                                    -math.cos(2*math.pi / 3), 0))
-    planeOrigo2 = mathutils.Vector((math.sin(2*math.pi),
-                                    -math.cos(2*math.pi), 0))
-    planeOrigo3 = mathutils.Vector((math.sin(2*2*math.pi / 3),
-                                    -math.cos(2*2*math.pi / 3), 0))
+    planeOrigo1 = \
+        mathutils.Vector((math.sin(2*math.pi / 3),
+                          -math.cos(2*math.pi / 3), 0))
+    planeOrigo2 = \
+        mathutils.Vector((math.sin(2*math.pi),
+                          -math.cos(2*math.pi), 0))
+    planeOrigo3 = \
+        mathutils.Vector((math.sin(2*2*math.pi / 3),
+                          -math.cos(2*2*math.pi / 3), 0))
 
     # Side Axis is the third joystick axis. Up, PlaneOrigo and PlaneSide makes up 3 axis
     planeSideAxis1 = up.cross(planeOrigo1)
@@ -151,42 +153,59 @@ class OT_fetch_data_operator(Operator):
 
     def move(self, context):
         properties = context.scene.my_addon
-        joystick1 = mathutils.Vector((properties.joyX1, properties.joyY1, 0))
-        joystick2 = mathutils.Vector((properties.joyX2, properties.joyY2, 0))
-        joystick3 = mathutils.Vector((properties.joyX3, properties.joyY3, 0))
+        joystick1 = mathutils.Vector((properties.joyX1, properties.joyY1, 0)) \
+            * properties.joy_speed
+        joystick2 = mathutils.Vector((properties.joyX2, properties.joyY2, 0)) \
+            * properties.joy_speed
+        joystick3 = mathutils.Vector((properties.joyX3, properties.joyY3, 0)) \
+            * properties.joy_speed
 
         # Joystick Y is axis Z in Blender
-        point1 = self.planeOrigo1 + self.planeSideAxis1 * \
-            joystick1.x + self.up * joystick1.y
-        point2 = self.planeOrigo2 + self.planeSideAxis2 * \
-            joystick2.x + self.up * joystick2.y
-        point3 = self.planeOrigo3 + self.planeSideAxis3 * \
-            joystick3.x + self.up * joystick3.y
+        point1 = self.planeOrigo1 + \
+            self.planeSideAxis1 * joystick1.x + \
+            self.up * joystick1.y
+        point2 = self.planeOrigo2 + \
+            self.planeSideAxis2 * joystick2.x + \
+            self.up * joystick2.y
+        point3 = self.planeOrigo3 + \
+            self.planeSideAxis3 * joystick3.x + \
+            self.up * joystick3.y
         centroid = (point1 + point2 + point3) / 3
-
-        # print(centroid)
 
         camera = bpy.context.scene.camera
         blender_translation = Vector((centroid.x, centroid.z, -centroid.y))
         world_translation = camera.matrix_world.to_3x3() @ blender_translation
-        camera.location += world_translation * properties.joy_speed
+        camera.location += world_translation
+
         # camera_rotation_matrix = camera.matrix_world.to_3x3()
         # translation = camera_rotation_matrix @ centroid
         # camera.location += translation
 
-        # v1 = point2 - point1
-        # v2 = point3 - point1
-        # normal = v1.cross(v2)
-        # normal.normalize()
-        # rotation = normal.rotation_difference(self.up).to_matrix()
-        # rot_up = self.up @ camera_rotation_matrix
+        v1 = point1 - point2
+        v2 = point3 - point2
+        normal = v1.cross(v2)
+        normal.normalize()
+
+        # rot_up = normal @ camera.matrix_world.to_3x3()
+        rotation_matrix = self.up.rotation_difference(
+            normal).to_matrix().to_4x4()
+
+        # rotation_matrix = camera.matrix_world.to_4x4() @ rotation_matrix
+
+        # print(normal)
+        # print(self.up)
+        # print(rotation_matrix)
+
+        # print(self.up)
+        # print(normal)
+        # print(rotation_matrix)
         # rot_normal = normal @ camera_rotation_matrix
         # rotation_matrix = rot_normal.rotation_difference(
         #    rot_up).to_matrix().to_4x4()
         # translation_matrix = Matrix.Translation(-camera.location)
         # back_translation_matrix = Matrix.Translation(camera.location)
         # transformation_matrix = back_translation_matrix @ rotation_matrix @ translation_matrix
-        # camera.matrix_basis @= transformation_matrix
+        camera.matrix_basis @= rotation_matrix
 
     def read_one_int(self, context, ser):
         threshold = context.scene.my_addon.joy_threshold
