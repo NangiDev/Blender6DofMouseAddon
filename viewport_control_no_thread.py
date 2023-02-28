@@ -2,8 +2,7 @@ from bpy.types import Operator, Panel, PropertyGroup
 from bpy.props import EnumProperty, IntProperty, FloatProperty, BoolProperty, PointerProperty
 import bpy
 import mathutils
-from mathutils import Matrix
-from mathutils import Vector
+from mathutils import Matrix, Vector, Euler
 import math
 import random
 
@@ -133,18 +132,20 @@ class OT_fetch_data_operator(Operator):
     bl_idname = "object.fetch_usb_data"
 
     # Common up vector
-    up = mathutils.Vector((0, 0, 1))
+    up = Vector((0, 0, 1))
+    right = Vector((1, 0, 0))
+    forward = Vector((0, 1, 0))
 
     # Origo acts as normal in joystick space
     planeOrigo1 = \
-        mathutils.Vector((math.sin(2*math.pi / 3),
-                          -math.cos(2*math.pi / 3), 0))
+        Vector((math.sin(2*math.pi / 3),
+                -math.cos(2*math.pi / 3), 0))
     planeOrigo2 = \
-        mathutils.Vector((math.sin(2*math.pi),
-                          -math.cos(2*math.pi), 0))
+        Vector((math.sin(2*math.pi),
+                -math.cos(2*math.pi), 0))
     planeOrigo3 = \
-        mathutils.Vector((math.sin(2*2*math.pi / 3),
-                          -math.cos(2*2*math.pi / 3), 0))
+        Vector((math.sin(2*2*math.pi / 3),
+                -math.cos(2*2*math.pi / 3), 0))
 
     # Side Axis is the third joystick axis. Up, PlaneOrigo and PlaneSide makes up 3 axis
     planeSideAxis1 = up.cross(planeOrigo1)
@@ -153,59 +154,44 @@ class OT_fetch_data_operator(Operator):
 
     def move(self, context):
         properties = context.scene.my_addon
-        joystick1 = mathutils.Vector((properties.joyX1, properties.joyY1, 0)) \
-            * properties.joy_speed
-        joystick2 = mathutils.Vector((properties.joyX2, properties.joyY2, 0)) \
-            * properties.joy_speed
-        joystick3 = mathutils.Vector((properties.joyX3, properties.joyY3, 0)) \
-            * properties.joy_speed
+        speed_multiplier = 0.1
+        joystick1 = Vector((properties.joyX1, 0, properties.joyY1))
+        joystick2 = Vector((properties.joyX2, 0, properties.joyY2))
+        joystick3 = Vector((properties.joyX3, 0, properties.joyY3))
 
         # Joystick Y is axis Z in Blender
         point1 = self.planeOrigo1 + \
             self.planeSideAxis1 * joystick1.x + \
-            self.up * joystick1.y
+            self.up * joystick1.z
         point2 = self.planeOrigo2 + \
             self.planeSideAxis2 * joystick2.x + \
-            self.up * joystick2.y
+            self.up * joystick2.z
         point3 = self.planeOrigo3 + \
             self.planeSideAxis3 * joystick3.x + \
-            self.up * joystick3.y
+            self.up * joystick3.z
         centroid = (point1 + point2 + point3) / 3
 
         camera = bpy.context.scene.camera
         blender_translation = Vector((centroid.x, centroid.z, -centroid.y))
         world_translation = camera.matrix_world.to_3x3() @ blender_translation
-        camera.location += world_translation
-
-        # camera_rotation_matrix = camera.matrix_world.to_3x3()
-        # translation = camera_rotation_matrix @ centroid
-        # camera.location += translation
+        camera.location += world_translation * properties.joy_speed
 
         v1 = point1 - point2
         v2 = point3 - point2
         normal = v1.cross(v2)
         normal.normalize()
 
-        # rot_up = normal @ camera.matrix_world.to_3x3()
-        rotation_matrix = self.up.rotation_difference(
-            normal).to_matrix().to_4x4()
+        xAxis = (point1 - point3)
+        yAxis = ((point1 + point3) / 2 - point2)
+        xAxis.normalize()
+        yAxis.normalize()
 
-        # rotation_matrix = camera.matrix_world.to_4x4() @ rotation_matrix
+        yaw = yAxis.x * speed_multiplier * properties.joy_speed
+        pitch = yAxis.z * speed_multiplier * properties.joy_speed
+        roll = xAxis.z * speed_multiplier * properties.joy_speed
 
-        # print(normal)
-        # print(self.up)
-        # print(rotation_matrix)
-
-        # print(self.up)
-        # print(normal)
-        # print(rotation_matrix)
-        # rot_normal = normal @ camera_rotation_matrix
-        # rotation_matrix = rot_normal.rotation_difference(
-        #    rot_up).to_matrix().to_4x4()
-        # translation_matrix = Matrix.Translation(-camera.location)
-        # back_translation_matrix = Matrix.Translation(camera.location)
-        # transformation_matrix = back_translation_matrix @ rotation_matrix @ translation_matrix
-        camera.matrix_basis @= rotation_matrix
+        euler_angles = Euler((pitch, -yaw, roll), 'XYZ').to_matrix().to_4x4()
+        camera.matrix_basis @= euler_angles
 
     def read_one_int(self, context, ser):
         threshold = context.scene.my_addon.joy_threshold
