@@ -2,9 +2,17 @@ from time import sleep
 import serial
 import random
 
-# Depends on com0com, https://sourceforge.net/projects/com0com/
+#
+# This is a simulator for writing to a virtual comport
+# So you don't have to connect the mouse to develop the Blender add-on
+#
 
-ser = serial.Serial(port='COM11', baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
+# For Windows you need a third party application to virtualize the serial port
+# Example com0com, https://sourceforge.net/projects/com0com/
+
+port = 'COM10'
+baudrate = 115200
+ser = serial.Serial(port=port, baudrate=baudrate, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                     stopbits=serial.STOPBITS_ONE, timeout=0.01)
 ser.close()
 ser.open()
