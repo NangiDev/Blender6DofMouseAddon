@@ -1,11 +1,9 @@
+import bpy
 from bpy.types import Operator, Panel, PropertyGroup
 from bpy.props import EnumProperty, IntProperty, FloatProperty, BoolProperty, PointerProperty
-import bpy
+import math
 import mathutils
 from mathutils import Matrix, Vector, Euler
-import math
-import random
-
 import serial.tools.list_ports
 
 bl_info = {
@@ -17,16 +15,8 @@ bl_info = {
 }
 
 
+# Class containing the properties for the 6DOF Mouse Add-on
 class MyAddonProperties(PropertyGroup):
-
-    def update_is_running(self, context):
-        pass
-
-    def port_callback_list(self, context):
-        ports = [(str(item).split(" ")[0], str(item), '')
-                 for item in list(serial.tools.list_ports.comports())]
-        return ports if ports else (('-1', 'No device found', ''),)
-
     def create_axis(num, axis):
         def update_redraw(self, context):
             pass
@@ -52,7 +42,20 @@ class MyAddonProperties(PropertyGroup):
     ser: serial.Serial = serial.Serial(baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE,
                                        stopbits=serial.STOPBITS_ONE, timeout=0.01)
 
+    def update_is_running(self, context):
+        pass
+
     is_running: BoolProperty(default=False, update=update_is_running)
+
+    def port_callback_list(self, context):
+        ports = [(str(item).split(" ")[0], str(item), '')
+                 for item in list(serial.tools.list_ports.comports())]
+        return ports if ports else (('-1', 'No device found', ''),)
+
+    port_dropdown_list: EnumProperty(
+        name="Port",
+        items=port_callback_list,
+    )
 
     joy_speed: FloatProperty(
         name="",
@@ -71,13 +74,8 @@ class MyAddonProperties(PropertyGroup):
         min=0.0,
         max=1.0)
 
-    port_dropdown_list: EnumProperty(
-        name="Port",
-        items=port_callback_list,
-    )
 
-
-class SIX_DOF_PT_main_panel(Panel):
+class SIX_DOF_PT_main_panel(Panel):  # Main Panel class
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = '6DOF'
@@ -127,7 +125,11 @@ class SIX_DOF_PT_main_panel(Panel):
             row.enabled = False
 
 
+# Operator for fetching data from the serial port
 class OT_fetch_data_operator(Operator):
+
+    # TODO Extract math to a separate function that can take object you want to control as parameter
+
     bl_label = "Fetch USB data"
     bl_idname = "object.fetch_usb_data"
 
@@ -154,7 +156,6 @@ class OT_fetch_data_operator(Operator):
 
     def move(self, context):
         properties = context.scene.my_addon
-        speed_multiplier = 0.1
         joystick1 = Vector((properties.joyX1, 0, properties.joyY1))
         joystick2 = Vector((properties.joyX2, 0, properties.joyY2))
         joystick3 = Vector((properties.joyX3, 0, properties.joyY3))
@@ -186,6 +187,7 @@ class OT_fetch_data_operator(Operator):
         xAxis.normalize()
         yAxis.normalize()
 
+        speed_multiplier = 0.1
         yaw = yAxis.x * speed_multiplier * properties.joy_speed
         pitch = yAxis.z * speed_multiplier * properties.joy_speed
         roll = xAxis.z * speed_multiplier * properties.joy_speed
